@@ -1149,6 +1149,7 @@ class WebAction:
         logids = data.get('logids') or []
         flag = data.get('flag')
         _filetransfer = FileTransfer()
+        errors = []
         for logid in logids:
             # 读取历史记录
             transinfo = _filetransfer.get_transfer_info_by_id(logid)
@@ -1176,6 +1177,7 @@ class WebAction:
                     del_flag, del_msg = self.delete_media_file(source_path, source_filename)
                     if not del_flag:
                         log.error(del_msg)
+                        errors.append(del_msg)
                     else:
                         log.info(del_msg)
                         # 触发源文件删除事件
@@ -1190,6 +1192,7 @@ class WebAction:
                         del_flag, del_msg = self.delete_media_file(dest_path, dest_filename)
                         if not del_flag:
                             log.error(del_msg)
+                            errors.append(del_msg)
                         else:
                             log.info(del_msg)
                             # 触发媒体库文件删除事件
@@ -1225,6 +1228,7 @@ class WebAction:
                                     })
                                 except Exception as e:
                                     ExceptionUtils.exception_traceback(e)
+                                    errors.append(str(e))
                             elif not meta_info.get_episode_string():
                                 # 电视剧但没有集数，删除季目录
                                 try:
@@ -1236,6 +1240,7 @@ class WebAction:
                                     })
                                 except Exception as e:
                                     ExceptionUtils.exception_traceback(e)
+                                    errors.append(str(e))
                                 rm_parent_dir = True
                             else:
                                 # 有集数的电视剧，删除对应的集数文件
@@ -1246,7 +1251,13 @@ class WebAction:
                                             file_meta_info.get_episode_list()
                                     ).issubset(set(meta_info.get_episode_list())):
                                         try:
-                                            os.remove(dest_file)
+                                            if os.path.isdir(dest_file):
+                                                shutil.rmtree(dest_file)
+                                            elif os.path.isfile(dest_file) or os.path.islink(dest_file):
+                                                os.remove(dest_file)
+                                            else:
+                                                errors.append(f"{dest_file} 无法删除")
+                                                continue
                                             # 触发媒体库文件删除事件
                                             EventManager().send_event(EventType.LibraryFileDeleted, {
                                                 "media_info": media_info,
@@ -1256,6 +1267,7 @@ class WebAction:
                                         except Exception as e:
                                             ExceptionUtils.exception_traceback(
                                                 e)
+                                            errors.append(str(e))
                                 rm_parent_dir = True
                             if rm_parent_dir \
                                     and not PathUtils.get_dir_files(os.path.dirname(dest_path), exts=RMT_MEDIAEXT):
@@ -1264,23 +1276,33 @@ class WebAction:
                                     shutil.rmtree(os.path.dirname(dest_path))
                                 except Exception as e:
                                     ExceptionUtils.exception_traceback(e)
+                                    errors.append(str(e))
+        if errors:
+            tail = "…" if len(errors) > 12 else ""
+            return {"retcode": -1, "retmsg": "；".join(errors[:12]) + tail}
         return {"retcode": 0}
 
     @staticmethod
     def delete_media_file(filedir, filename):
         """
-        删除媒体文件，空目录也会被删除
+        删除媒体文件，空目录也会被删除。
+        支持单文件或「以目录形式存在的影片/剧集」（整目录刮削时 path 指向文件夹而非单个视频文件）。
         """
         filedir = os.path.normpath(filedir).replace("\\", "/")
         file = os.path.join(filedir, filename)
         try:
             if not os.path.exists(file):
                 return False, f"{file} 不存在"
-            os.remove(file)
-            nfoname = f"{os.path.splitext(filename)[0]}.nfo"
-            nfofile = os.path.join(filedir, nfoname)
-            if os.path.exists(nfofile):
-                os.remove(nfofile)
+            if os.path.isdir(file):
+                shutil.rmtree(file)
+            elif os.path.isfile(file) or os.path.islink(file):
+                os.remove(file)
+                nfoname = f"{os.path.splitext(filename)[0]}.nfo"
+                nfofile = os.path.join(filedir, nfoname)
+                if os.path.exists(nfofile):
+                    os.remove(nfofile)
+            else:
+                return False, f"{file} 不是可删除的文件或目录"
             # 检查空目录并删除
             if re.findall(r"^S\d{2}|^Season", os.path.basename(filedir), re.I):
                 # 当前是季文件夹，判断并删除
@@ -1300,7 +1322,7 @@ class WebAction:
             return True, f"{file} 删除成功"
         except Exception as e:
             ExceptionUtils.exception_traceback(e)
-            return True, f"{file} 删除失败"
+            return False, f"{file} 删除失败"
 
     @staticmethod
     def __version():
@@ -4701,6 +4723,7 @@ class WebAction:
         删除文件
         """
         files = data.get("files")
+        errors = []
         if files:
             # 删除文件
             for file in files:
@@ -4708,8 +4731,12 @@ class WebAction:
                                                            filename=os.path.basename(file))
                 if not del_flag:
                     log.error(del_msg)
+                    errors.append(del_msg)
                 else:
                     log.info(del_msg)
+        if errors:
+            tail = "…" if len(errors) > 12 else ""
+            return {"code": -1, "msg": "；".join(errors[:12]) + tail}
         return {"code": 0}
 
     @staticmethod
