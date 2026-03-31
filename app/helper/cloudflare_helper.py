@@ -287,11 +287,7 @@ async def check_verification_success(tab: Tab, success_selectors=None, timeout=1
     """
     from app.helper import ChromeHelper
     
-    if success_selectors is None:
-        success_selectors = [
-            'div[role="alert"] #success-text',
-            'span[id="success-text"]',
-        ]
+    success_selectors = success_selectors or []
     
     challenge_selectors = [
         'div[class*="main-wrapper"] input[type=checkbox]',  # Cloudflare主要验证框
@@ -312,14 +308,6 @@ async def check_verification_success(tab: Tab, success_selectors=None, timeout=1
             if token_valid:
                 log.debug("Verification success: valid turnstile token found")
                 return True
-
-            success_found = False
-            for selector in success_selectors:
-                found, coordinates = await ChromeHelper.find_element(tab, selector)
-                if found:
-                    log.debug(f"Found success element: {selector} at {coordinates}")
-                    success_found = True
-                    break
             
             challenge_gone = True
             for selector in challenge_selectors:
@@ -327,6 +315,14 @@ async def check_verification_success(tab: Tab, success_selectors=None, timeout=1
                 if found:
                     log.debug(f"Challenge element still present: {selector}")
                     challenge_gone = False
+                    break
+
+            success_found = False
+            for selector in success_selectors:
+                found, coordinates = await ChromeHelper.find_element(tab, selector)
+                if found:
+                    log.debug(f"Found success element: {selector} at {coordinates}")
+                    success_found = True
                     break
             
             if success_found:

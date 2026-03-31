@@ -1369,9 +1369,12 @@ class AutoSignIn(_IPluginModule):
                             except Exception as e:
                                 self.debug(f"{site} 尝试选择器 {selector} 失败: {str(e)}")
                                 continue
-                        # 判断是否已签到   [签到已得125, 补签卡: 0]
-                        if re.search(r'已签|签到已得', await chrome.get_html(), re.IGNORECASE):
-                            return f"【{site}】签到成功"
+                        # 判断是否已签到   [签到已得125, 补签卡: 0]（页面可能异步更新，最多轮询约 10 秒）
+                        _signin_deadline = asyncio.get_event_loop().time() + 10.0
+                        while asyncio.get_event_loop().time() < _signin_deadline:
+                            if re.search(r'已签|签到已得', await chrome.get_html(), re.IGNORECASE):
+                                return f"【{site}】签到成功"
+                            await asyncio.sleep(1)
                         self.info("%s 仿真签到成功" % site)
                         return f"【{site}】仿真签到成功"
                 except Exception as e:

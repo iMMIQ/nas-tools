@@ -898,8 +898,7 @@ class ChromeHelper(object):
             return True, (vx + sx, vy + sy)
         if await ChromeHelper._dom_click_selector(process_tab, selector):
             log.debug(
-                "合成鼠标不可用（元素不在视口或坐标不可靠），已回退为 DOM 原生 click: selector=%s",
-                selector,
+                f"合成鼠标不可用（元素不在视口或坐标不可靠），已回退为 DOM 原生 click: selector={selector!r}"
             )
             sx, sy = await ChromeHelper._scroll_xy(process_tab)
             vw = await ChromeHelper._viewport_center_for_selector(process_tab, selector)
@@ -1027,8 +1026,7 @@ class ChromeHelper(object):
                         last_get_box_fail = str(e)
                 if last_get_box_fail:
                     log.debug(
-                        "getBoxModel 经 2 次 DOM 刷新后仍不可用（可忽略 -32000 等，将尝试 JS 视口坐标）: %s",
-                        last_get_box_fail,
+                        f"getBoxModel 经 2 次 DOM 刷新后仍不可用（可忽略 -32000 等，将尝试 JS 视口坐标）: {last_get_box_fail}"
                     )
                 return process_tab_out, result_out, None, node_id_out
 
@@ -1067,16 +1065,13 @@ class ChromeHelper(object):
             if not vw:
                 if await ChromeHelper._dom_click_selector(process_tab, selector):
                     log.debug(
-                        "getBoxModel 不可用且未取得视口坐标，已使用 DOM 原生 click: %s",
-                        selector,
+                        f"getBoxModel 不可用且未取得视口坐标，已使用 DOM 原生 click: {selector!r}"
                     )
                     return True, None
                 return False, None
             vx, vy = vw
             log.debug(
-                "getBoxModel 不可用，按视口坐标尝试合成点击（必要时滚动或 DOM click）: (%.1f, %.1f)",
-                vx,
-                vy,
+                f"getBoxModel 不可用，按视口坐标尝试合成点击（必要时滚动或 DOM click）: ({vx:.1f}, {vy:.1f})"
             )
             ok, doc_coords = await ChromeHelper._perform_click_with_fallback(
                 process_tab, selector, vx, vy
