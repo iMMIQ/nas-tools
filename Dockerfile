@@ -1,7 +1,14 @@
 FROM python:3.12.8-alpine3.20
+ARG PYPI_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
+ENV PIP_INDEX_URL=${PYPI_MIRROR} \
+    PIP_DEFAULT_TIMEOUT=120 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 COPY requirements.txt ./
 COPY package_list.txt ./
-RUN apk update
+RUN mkdir -p /root/.config/pip \
+    && python -m pip config set global.index-url ${PIP_INDEX_URL} \
+    && sed -i 's#https://dl-cdn.alpinelinux.org/alpine#https://mirrors.ustc.edu.cn/alpine#g' /etc/apk/repositories \
+    && apk update
 RUN apk add --no-cache --virtual .build-deps \
         libffi-dev \
         gcc \
@@ -10,9 +17,6 @@ RUN apk add --no-cache --virtual .build-deps \
         libxslt-dev \
     && apk add --no-cache $(echo $(cat ./package_list.txt)) \
     && curl https://rclone.org/install.sh | bash \
-    && if [ "$(uname -m)" = "x86_64" ]; then ARCH=amd64; elif [ "$(uname -m)" = "aarch64" ]; then ARCH=arm64; fi \
-    && curl https://dl.min.io/client/mc/release/linux-${ARCH}/mc --create-dirs -o /usr/bin/mc \
-    && chmod +x /usr/bin/mc \
     && pip install --upgrade pip setuptools wheel \
     && pip install cython \
     && pip install -r ./requirements.txt \
@@ -54,9 +58,11 @@ RUN mkdir ${HOME} \
     && echo 'fs.inotify.max_user_instances=5242880' >> /etc/sysctl.conf \
     && echo "nt ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers \
     && git config --global pull.ff only
-COPY --chmod=755 . ${WORKDIR}/
-RUN git config --global --add safe.directory ${WORKDIR}
-COPY --chmod=755 ./docker/rootfs /
+COPY . ${WORKDIR}/
+RUN chmod -R 755 ${WORKDIR} \
+    && git config --global --add safe.directory ${WORKDIR}
+COPY ./docker/rootfs /
+RUN chmod 755 /etc/s6-overlay/s6-rc.d/*/run /etc/s6-overlay/s6-rc.d/*/finish /etc/s6-overlay/s6-rc.d/*/up 2>/dev/null || true
 EXPOSE 3000
 VOLUME ["/config"]
 ENTRYPOINT [ "/init" ]

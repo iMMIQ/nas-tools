@@ -1,4 +1,4 @@
-#!/usr/bin/with-contenv bash
+#!/command/with-contenv /bin/bash
 # shellcheck shell=bash
 
 # 从配置读取 Redis 端口

@@ -36,7 +36,35 @@ docker pull TonyLiooo/nas-tools:latest
 
 如无法连接Github，注意不要开启自动更新开关(NASTOOL_AUTO_UPDATE=false)，将NASTOOL_CN_UPDATE设置为true可使用国内源加速安装依赖。
 
-### 2、本地运行
+### 2、懒猫微服
+
+项目已添加懒猫微服部署支持，仓库根目录包含以下文件：
+
+- `package.yml`
+- `lzc-manifest.yml`
+- `lzc-build.yml`
+
+部署前请先安装并配置 `lzc-cli`、`docker buildx`，然后在项目根目录执行：
+
+```bash
+./scripts/deploy_lazycat.sh
+```
+
+如需指定微服名称：
+
+```bash
+./scripts/deploy_lazycat.sh --box immiqtop
+```
+
+部署后，应用配置会自动写入 `/config/config.yaml`，首次使用时可重点关注这些容器内路径：
+
+- `/config`：应用配置与日志
+- `/lzcapp/media/RemoteFS`：懒猫媒体挂载
+- `/lzcapp/run/mnt/home`：文稿兼容挂载
+
+在懒猫环境中建议继续保持 `NASTOOL_AUTO_UPDATE=false`，通过重新部署 LPK 的方式升级应用。
+
+### 3、本地运行
 python3.10版本，需要预安装cython，如发现缺少依赖包需额外安装：
 ```
 git clone -b master https://github.com/TonyLiooo/nas-tools --recurse-submodule 

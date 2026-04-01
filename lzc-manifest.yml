@@ -1,0 +1,41 @@
+lzc-sdk-version: '0.1'
+name: NAS Tools
+package: cloud.lazycat.app.nas-tools
+version: 3.5.9
+description: 媒体库管理与自动整理工具
+author: TonyLiooo
+license: AGPL-3.0
+homepage: https://github.com/iMMIQ/nas-tools
+
+usage: |
+  首次启动后，应用会在 `/config/config.yaml` 自动生成配置模板。
+
+  懒猫微服环境下建议关注以下路径：
+  1. 应用配置与日志：`/config`
+  2. 懒猫媒体挂载：`/lzcapp/media/RemoteFS`
+  3. 文稿兼容路径：`/lzcapp/run/mnt/home`
+
+  如需整理、转移或硬链接媒体文件，请在应用配置中使用以上容器内路径。
+
+ext_config:
+  enable_media_access: true
+  enable_document_access: true
+
+application:
+  subdomain: nastools
+  routes:
+    - /=http://nastools:3000/
+
+services:
+  nastools:
+    image: dev.immiqtop.heiyu.space/lzc/nas-tools:3.5.9
+    binds:
+      - /lzcapp/var/config:/config
+    environment:
+      - NASTOOL_CONFIG=/config/config.yaml
+      - NASTOOL_AUTO_UPDATE=false
+      - NASTOOL_CN_UPDATE=true
+      - TZ=Asia/Shanghai
+      - PUID=0
+      - PGID=0
+      - UMASK=000

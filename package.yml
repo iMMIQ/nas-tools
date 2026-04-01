@@ -1,0 +1,25 @@
+package: cloud.lazycat.app.nas-tools
+version: 3.5.9
+name: NAS Tools
+description: 媒体库管理与自动整理工具
+author: TonyLiooo
+license: AGPL-3.0
+homepage: https://github.com/iMMIQ/nas-tools
+locales:
+  zh-CN:
+    name: NAS Tools
+    description: 媒体库管理与自动整理工具
+  en-US:
+    name: NAS Tools
+    description: Media library management and automation tool
+permissions:
+  required:
+    - net.internet
+    - net.lan
+  optional:
+    - media.read
+    - media.write
+    - document.read
+    - document.write
+    - document.private
+
