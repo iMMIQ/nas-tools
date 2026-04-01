@@ -12,15 +12,15 @@ RUN sed -i 's#https://dl-cdn.alpinelinux.org/alpine#https://mirrors.ustc.edu.cn/
         musl-dev \
         libxml2-dev \
         libxslt-dev \
-    && apk add --no-cache $(wget --no-check-certificate -qO- https://raw.githubusercontent.com/TonyLiooo/nas-tools/master/package_list.txt) \
+    && apk add --no-cache $(wget --no-check-certificate -qO- https://raw.githubusercontent.com/iMMIQ/nas-tools/master/package_list.txt) \
     && curl -sSf https://rclone.org/install.sh | bash \
     && ARCH=$(if [ "$(uname -m)" = "x86_64" ]; then echo "amd64"; else echo "arm64"; fi) \
     && curl -sSfL https://dl.min.io/client/mc/release/linux-${ARCH}/mc --create-dirs -o /usr/bin/mc \
     && chmod +x /usr/bin/mc \
     && python -m pip install --upgrade pip setuptools wheel uv \
     && python -m pip install cython \
-    && curl -sSfL https://raw.githubusercontent.com/TonyLiooo/nas-tools/master/pyproject.toml -o /tmp/pyproject.toml \
-    && curl -sSfL https://raw.githubusercontent.com/TonyLiooo/nas-tools/master/uv.lock -o /tmp/uv.lock \
+    && curl -sSfL https://raw.githubusercontent.com/iMMIQ/nas-tools/master/pyproject.toml -o /tmp/pyproject.toml \
+    && curl -sSfL https://raw.githubusercontent.com/iMMIQ/nas-tools/master/uv.lock -o /tmp/uv.lock \
     && cd /tmp \
     && uv export --frozen --no-dev --no-hashes --no-emit-project -o /tmp/requirements.txt \
     && uv pip install --system -r /tmp/requirements.txt \
@@ -44,7 +44,7 @@ ENV PYTHONPATH=/usr/lib/python3.12/site-packages \
     NASTOOL_CN_UPDATE=true \
     NASTOOL_VERSION=master \
     PS1="\u@\h:\w \$ " \
-    REPO_URL="https://github.com/TonyLiooo/nas-tools.git" \
+    REPO_URL="https://github.com/iMMIQ/nas-tools.git" \
     PYPI_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple" \
     ALPINE_MIRROR="mirrors.ustc.edu.cn" \
     PUID=0 \

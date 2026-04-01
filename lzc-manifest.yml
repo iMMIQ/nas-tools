@@ -3,7 +3,7 @@ name: NAS Tools
 package: cloud.lazycat.app.nas-tools
 version: 3.5.9
 description: 媒体库管理与自动整理工具
-author: TonyLiooo
+author: iMMIQ
 license: AGPL-3.0
 homepage: https://github.com/iMMIQ/nas-tools
 

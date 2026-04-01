@@ -2,14 +2,14 @@
 # NAS媒体库管理工具
 
 
-[![GitHub stars](https://img.shields.io/github/stars/TonyLiooo/nas-tools?style=plastic)](https://github.com/TonyLiooo/nas-tools/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/TonyLiooo/nas-tools?style=plastic)](https://github.com/TonyLiooo/nas-tools/network/members)
-[![GitHub issues](https://img.shields.io/github/issues/TonyLiooo/nas-tools?style=plastic)](https://github.com/TonyLiooo/nas-tools/issues)
-[![GitHub license](https://img.shields.io/github/license/TonyLiooo/nas-tools?style=plastic)](https://github.com/TonyLiooo/nas-tools/blob/master/LICENSE.md)
-[![Docker pulls](https://img.shields.io/docker/pulls/TonyLiooo/nas-tools?style=plastic)](https://hub.docker.com/r/TonyLiooo/nas-tools)
-[![Platform](https://img.shields.io/badge/platform-amd64/arm64-pink?style=plastic)](https://hub.docker.com/r/TonyLiooo/nas-tools)
+[![GitHub stars](https://img.shields.io/github/stars/iMMIQ/nas-tools?style=plastic)](https://github.com/iMMIQ/nas-tools/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/iMMIQ/nas-tools?style=plastic)](https://github.com/iMMIQ/nas-tools/network/members)
+[![GitHub issues](https://img.shields.io/github/issues/iMMIQ/nas-tools?style=plastic)](https://github.com/iMMIQ/nas-tools/issues)
+[![GitHub license](https://img.shields.io/github/license/iMMIQ/nas-tools?style=plastic)](https://github.com/iMMIQ/nas-tools/blob/master/LICENSE.md)
+[![Docker pulls](https://img.shields.io/docker/pulls/iMMIQ/nas-tools?style=plastic)](https://hub.docker.com/r/iMMIQ/nas-tools)
+[![Platform](https://img.shields.io/badge/platform-amd64/arm64-pink?style=plastic)](https://hub.docker.com/r/iMMIQ/nas-tools)
 
-Docker：https://hub.docker.com/repository/docker/TonyLiooo/nas-tools
+Docker：https://hub.docker.com/repository/docker/iMMIQ/nas-tools
 
 ## 基于官方主线版本增强
 1. 基于主线最新 3.2.3 版本制作，配置可以完美迁移

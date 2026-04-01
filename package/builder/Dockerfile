@@ -9,7 +9,7 @@ ENV NASTOOL_CONFIG=/nas-tools/config/config.yaml \
     UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple
 
 RUN python -m pip install --upgrade pip setuptools wheel uv
-RUN git clone --depth=1 -b ${branch} https://github.com/TonyLiooo/nas-tools --recurse-submodule /nas-tools
+RUN git clone --depth=1 -b ${branch} https://github.com/iMMIQ/nas-tools --recurse-submodule /nas-tools
 WORKDIR /nas-tools
 RUN python -m pip install cython \
     && uv export --frozen --group build --no-dev --no-hashes --no-emit-project -o /tmp/requirements.txt \

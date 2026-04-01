@@ -10,7 +10,7 @@ RUN sed -i 's#https://dl-cdn.alpinelinux.org/alpine#https://mirrors.ustc.edu.cn/
     && apk update \
     && apk add build-base git libxslt-dev libxml2-dev musl-dev gcc libffi-dev
 RUN python -m pip install --upgrade pip setuptools wheel uv
-RUN git clone --depth=1 -b ${branch} https://github.com/TonyLiooo/nas-tools --recurse-submodule /nas-tools
+RUN git clone --depth=1 -b ${branch} https://github.com/iMMIQ/nas-tools --recurse-submodule /nas-tools
 WORKDIR /nas-tools
 RUN python -m pip install cython \
     && uv export --frozen --group build --no-dev --no-hashes --no-emit-project -o /tmp/requirements.txt \

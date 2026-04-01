@@ -37,9 +37,9 @@ class AutoSignIn(_IPluginModule):
     # 插件版本
     module_version = "1.1"
     # 插件作者
-    module_author = "TonyLiooo"
+    module_author = "iMMIQ"
     # 作者主页
-    author_url = "https://github.com/TonyLiooo"
+    author_url = "https://github.com/iMMIQ"
     # 插件配置项ID前缀
     module_config_prefix = "autosignin_"
     # 加载顺序

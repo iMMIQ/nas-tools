@@ -11,8 +11,8 @@ RUN set -xe && \
     echo "deb http://mirrors.ustc.edu.cn/debian-security/ bookworm-security main" >> /etc/apt/sources.list && \
     apt-get update -y || (sleep 10 && apt-get update -y) && \
     apt-get install -y --no-install-recommends wget && \
-    apt-get install -y --no-install-recommends --fix-missing $(wget --no-check-certificate -qO- https://raw.githubusercontent.com/TonyLiooo/nas-tools/master/package_list_debian.txt) || \
-    (apt-get update -y && apt-get install -y --fix-broken && apt-get install -y --no-install-recommends --fix-missing $(wget --no-check-certificate -qO- https://raw.githubusercontent.com/TonyLiooo/nas-tools/master/package_list_debian.txt)) && \
+    apt-get install -y --no-install-recommends --fix-missing $(wget --no-check-certificate -qO- https://raw.githubusercontent.com/iMMIQ/nas-tools/master/package_list_debian.txt) || \
+    (apt-get update -y && apt-get install -y --fix-broken && apt-get install -y --no-install-recommends --fix-missing $(wget --no-check-certificate -qO- https://raw.githubusercontent.com/iMMIQ/nas-tools/master/package_list_debian.txt)) && \
     apt-get install -y --no-install-recommends curl || \
     (sleep 30 && apt-get update -y && apt-get install -y --no-install-recommends curl) && \
     ln -sf /command/with-contenv /usr/bin/with-contenv && \
@@ -25,8 +25,8 @@ RUN set -xe && \
     chmod +x /usr/bin/mc && \
     python -m pip install --upgrade pip setuptools wheel uv && \
     python -m pip install cython && \
-    curl -sSfL https://raw.githubusercontent.com/TonyLiooo/nas-tools/master/pyproject.toml -o /tmp/pyproject.toml && \
-    curl -sSfL https://raw.githubusercontent.com/TonyLiooo/nas-tools/master/uv.lock -o /tmp/uv.lock && \
+    curl -sSfL https://raw.githubusercontent.com/iMMIQ/nas-tools/master/pyproject.toml -o /tmp/pyproject.toml && \
+    curl -sSfL https://raw.githubusercontent.com/iMMIQ/nas-tools/master/uv.lock -o /tmp/uv.lock && \
     cd /tmp && \
     uv export --frozen --no-dev --no-hashes --no-emit-project -o /tmp/requirements.txt && \
     uv pip install --system -r /tmp/requirements.txt && \
@@ -53,7 +53,7 @@ ENV PYTHONPATH=/usr/local/lib/python3.12/site-packages \
     NASTOOL_CN_UPDATE=true \
     NASTOOL_VERSION=master \
     PS1="\u@\h:\w \$ " \
-    REPO_URL="https://github.com/TonyLiooo/nas-tools.git" \
+    REPO_URL="https://github.com/iMMIQ/nas-tools.git" \
     PYPI_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple" \
     PUID=0 \
     PGID=0 \

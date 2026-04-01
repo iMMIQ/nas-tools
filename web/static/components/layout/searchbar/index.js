@@ -167,7 +167,7 @@ export class LayoutSearchbar extends CustomElement {
                 ? html`<a class="dropdown-item" href="javascript:show_terminal_modal()" role="button">终端</a>`
                 : nothing }
                 <div class="dropdown-divider"></div>
-                <a href="https://github.com/TonyLiooo/nas-tools/blob/master/README.md" target="_blank" class="dropdown-item">帮助中心</a>
+                <a href="https://github.com/iMMIQ/nas-tools/blob/master/README.md" target="_blank" class="dropdown-item">帮助中心</a>
               </div>
             </div>
           </div>
