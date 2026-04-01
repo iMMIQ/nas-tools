@@ -8,11 +8,11 @@
 [![Docker pulls](https://img.shields.io/docker/pulls/TonyLiooo/nas-tools?style=plastic)](https://hub.docker.com/r/TonyLiooo/nas-tools)
 [![Platform](https://img.shields.io/badge/platform-amd64/arm64-pink?style=plastic)](https://hub.docker.com/r/TonyLiooo/nas-tools)
 
-Docker：https://hub.docker.com/repository/docker/TonyLiooo/nas-tools  
+Docker：https://hub.docker.com/repository/docker/TonyLiooo/nas-tools
 
 
 
-## 功能： 
+## 功能：
 
 1. 优化用户认证
 2. 优化新手刷流体验
@@ -25,7 +25,7 @@ Docker：https://hub.docker.com/repository/docker/TonyLiooo/nas-tools
 5. 增加一些入口的快捷跳转能力
 6. 完美支持 Mteam 新架构
 
-详细参考 [这里](diff.md)。  
+详细参考 [这里](diff.md)。
 
 ## 安装
 ### 1、Docker
@@ -65,12 +65,18 @@ docker pull TonyLiooo/nas-tools:latest
 在懒猫环境中建议继续保持 `NASTOOL_AUTO_UPDATE=false`，通过重新部署 LPK 的方式升级应用。
 
 ### 3、本地运行
-python3.10版本，需要预安装cython，如发现缺少依赖包需额外安装：
+推荐使用 `uv` 管理依赖，仓库中的 `pyproject.toml` 和 `uv.lock` 为唯一依赖源：
 ```
-git clone -b master https://github.com/TonyLiooo/nas-tools --recurse-submodule 
-python3 -m pip install -r requirements.txt
+git clone -b master https://github.com/TonyLiooo/nas-tools --recurse-submodule
+cd nas-tools
+uv sync --frozen
 export NASTOOL_CONFIG="/xxx/config/config.yaml"
-nohup python3 run.py & 
+nohup uv run python run.py &
+```
+
+如需更新锁文件，可在调整 `pyproject.toml` 后执行：
+```
+uv lock
 ```
 ## 常见问题
 请参考 [常见问题](Q&A.md)

@@ -1,13 +1,10 @@
-# Use slim-bookworm as the base image
 FROM python:3.12.8-slim-bookworm
 
-# Copy S6 Overlay
 COPY --from=shinsenter/s6-overlay / /
 
-# Set environment variable to avoid interactive installation
-ENV DEBIAN_FRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive \
+    UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple
 
-# Install dependencies
 RUN set -xe && \
     echo "deb http://mirrors.ustc.edu.cn/debian/ bookworm main" > /etc/apt/sources.list && \
     echo "deb http://mirrors.ustc.edu.cn/debian/ bookworm-updates main" >> /etc/apt/sources.list && \
@@ -26,16 +23,20 @@ RUN set -xe && \
     if [ "$(uname -m)" = "x86_64" ]; then ARCH=amd64; elif [ "$(uname -m)" = "aarch64" ]; then ARCH=arm64; fi && \
     curl -L https://dl.min.io/client/mc/release/linux-${ARCH}/mc -o /usr/bin/mc && \
     chmod +x /usr/bin/mc && \
-    pip install --upgrade pip setuptools wheel && \
-    pip install cython && \
-    pip install -r https://raw.githubusercontent.com/TonyLiooo/nas-tools/master/requirements.txt && \
-    pip install feapder==1.9.2 --no-deps && \
+    python -m pip install --upgrade pip setuptools wheel uv && \
+    python -m pip install cython && \
+    curl -sSfL https://raw.githubusercontent.com/TonyLiooo/nas-tools/master/pyproject.toml -o /tmp/pyproject.toml && \
+    curl -sSfL https://raw.githubusercontent.com/TonyLiooo/nas-tools/master/uv.lock -o /tmp/uv.lock && \
+    cd /tmp && \
+    uv export --frozen --no-dev --no-hashes --no-emit-project -o /tmp/requirements.txt && \
+    uv pip install --system -r /tmp/requirements.txt && \
+    python -m pip install feapder==1.9.2 --no-deps && \
+    python -m pip install uv && \
     apt-get remove -y build-essential && \
     apt-get autoremove -y && \
     apt-get clean -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /root/.cache /var/tmp/*
 
-# Set environment variables
 ENV PYTHONPATH=/usr/local/lib/python3.12/site-packages \
     DEBIAN_FRONTEND="noninteractive" \
     S6_SERVICES_GRACETIME=30000 \
@@ -60,10 +61,7 @@ ENV PYTHONPATH=/usr/local/lib/python3.12/site-packages \
     PYTHONWARNINGS="ignore:semaphore_tracker:UserWarning" \
     WORKDIR="/nas-tools"
 
-# Set the working directory
 WORKDIR ${WORKDIR}
-
-# Create user and group
 RUN set -xe && \
     mkdir -p ${HOME} && \
     groupadd -r nt -g 911 && \
@@ -79,14 +77,8 @@ RUN set -xe && \
     git clone -b master ${REPO_URL} ${WORKDIR} --depth=1 --recurse-submodule && \
     git config --global --add safe.directory ${WORKDIR}
 
-# Copy root filesystem
-COPY --chmod=755 ./rootfs /
-
-# Expose port
+COPY ./rootfs /
+RUN chmod 755 /etc/s6-overlay/s6-rc.d/*/run /etc/s6-overlay/s6-rc.d/*/finish /etc/s6-overlay/s6-rc.d/*/up 2>/dev/null || true
 EXPOSE 3000
-
-# Set volume for configuration
 VOLUME [ "/config" ]
-
-# Set entry point
 ENTRYPOINT [ "/init" ]

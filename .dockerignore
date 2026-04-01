@@ -10,5 +10,6 @@ package
 docker/volume.png
 *.lpk
 node_modules
+.venv
 .DS_Store
 

@@ -1,9 +1,10 @@
 FROM python:3.12.8-alpine3.20
 ARG PYPI_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
 ENV PIP_INDEX_URL=${PYPI_MIRROR} \
+    UV_DEFAULT_INDEX=${PYPI_MIRROR} \
     PIP_DEFAULT_TIMEOUT=120 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
-COPY requirements.txt ./
+COPY pyproject.toml uv.lock ./
 COPY package_list.txt ./
 RUN mkdir -p /root/.config/pip \
     && python -m pip config set global.index-url ${PIP_INDEX_URL} \
@@ -17,10 +18,12 @@ RUN apk add --no-cache --virtual .build-deps \
         libxslt-dev \
     && apk add --no-cache $(echo $(cat ./package_list.txt)) \
     && curl https://rclone.org/install.sh | bash \
-    && pip install --upgrade pip setuptools wheel \
-    && pip install cython \
-    && pip install -r ./requirements.txt \
-    && pip install feapder==1.9.2 --no-deps \
+    && python -m pip install --upgrade pip setuptools wheel uv \
+    && python -m pip install cython \
+    && uv export --frozen --no-dev --no-hashes --no-emit-project -o /tmp/requirements.txt \
+    && uv pip install --system -r /tmp/requirements.txt \
+    && python -m pip install feapder==1.9.2 --no-deps \
+    && python -m pip install uv \
     && apk del --purge .build-deps \
     && rm -rf /tmp/* /root/.cache /var/cache/apk/*
 ENV PYTHONPATH=/usr/lib/python3.12/site-packages \

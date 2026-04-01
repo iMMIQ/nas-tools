@@ -1496,7 +1496,14 @@ class WebAction:
             if os.system("sudo git submodule update --init --recursive") != 0:
                 return {"code": -2}
             # 安装依赖
-            if os.system('sudo pip install -r /nas-tools/requirements.txt') != 0:
+            install_cmd = ("sudo bash -lc \"cd /nas-tools && "
+                           "if grep -Eqi 'Debian' /etc/issue || grep -Eq 'Debian' /etc/os-release; then apt-get update -y && apt-get install -y build-essential libffi-dev libxml2-dev libxslt1-dev; else apk add --no-cache libffi-dev gcc musl-dev libxml2-dev libxslt-dev; fi && "
+                           "if [ -n '${PYPI_MIRROR:-}' ]; then export UV_DEFAULT_INDEX=\\\"${PYPI_MIRROR}\\\"; fi && "
+                           "if ! command -v uv >/dev/null 2>&1; then python3 -m pip install uv; fi && "
+                           "uv export --frozen --no-dev --no-hashes --no-emit-project -o /tmp/nas-tools-requirements.txt && "
+                           "uv pip install --system -r /tmp/nas-tools-requirements.txt && "
+                           "python3 -m pip install feapder==1.9.2 --no-deps\"")
+            if os.system(install_cmd) != 0:
                 return {"code": -3}
             # 修复权限
             os.system('sudo chown -R nt:nt /nas-tools')

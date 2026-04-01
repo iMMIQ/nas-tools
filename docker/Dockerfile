@@ -1,7 +1,12 @@
 FROM python:3.12.8-alpine3.20
 
-# Install build dependencies and required packages in one layer
-RUN apk add --no-cache --virtual .build-deps \
+ARG PYPI_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
+ENV PIP_INDEX_URL=${PYPI_MIRROR} \
+    UV_DEFAULT_INDEX=${PYPI_MIRROR}
+
+RUN sed -i 's#https://dl-cdn.alpinelinux.org/alpine#https://mirrors.ustc.edu.cn/alpine#g' /etc/apk/repositories \
+    && apk update \
+    && apk add --no-cache --virtual .build-deps \
         libffi-dev \
         gcc \
         musl-dev \
@@ -12,13 +17,18 @@ RUN apk add --no-cache --virtual .build-deps \
     && ARCH=$(if [ "$(uname -m)" = "x86_64" ]; then echo "amd64"; else echo "arm64"; fi) \
     && curl -sSfL https://dl.min.io/client/mc/release/linux-${ARCH}/mc --create-dirs -o /usr/bin/mc \
     && chmod +x /usr/bin/mc \
-    && pip install --upgrade pip setuptools wheel cython \
-    && pip install -r https://raw.githubusercontent.com/TonyLiooo/nas-tools/master/requirements.txt \
-    && pip install feapder==1.9.2 --no-deps \
+    && python -m pip install --upgrade pip setuptools wheel uv \
+    && python -m pip install cython \
+    && curl -sSfL https://raw.githubusercontent.com/TonyLiooo/nas-tools/master/pyproject.toml -o /tmp/pyproject.toml \
+    && curl -sSfL https://raw.githubusercontent.com/TonyLiooo/nas-tools/master/uv.lock -o /tmp/uv.lock \
+    && cd /tmp \
+    && uv export --frozen --no-dev --no-hashes --no-emit-project -o /tmp/requirements.txt \
+    && uv pip install --system -r /tmp/requirements.txt \
+    && python -m pip install feapder==1.9.2 --no-deps \
+    && python -m pip install uv \
     && apk del --purge .build-deps \
     && rm -rf /var/cache/apk/* /tmp/* /root/.cache/*
 
-# Set environment variables
 ENV PYTHONPATH=/usr/lib/python3.12/site-packages \
     S6_SERVICES_GRACETIME=30000 \
     S6_KILL_GRACETIME=60000 \
@@ -43,7 +53,6 @@ ENV PYTHONPATH=/usr/lib/python3.12/site-packages \
     PYTHONWARNINGS="ignore:semaphore_tracker:UserWarning" \
     WORKDIR="/nas-tools"
 
-# Set working directory and create necessary directories and users
 WORKDIR ${WORKDIR}
 RUN mkdir -p ${HOME} \
     && addgroup -S nt -g 911 \
@@ -58,10 +67,8 @@ RUN mkdir -p ${HOME} \
     && git clone -b master ${REPO_URL} ${WORKDIR} --depth=1 --recurse-submodule \
     && git config --global --add safe.directory ${WORKDIR}
 
-# Copy root filesystem and expose port
-COPY --chmod=755 ./rootfs /
+COPY ./rootfs /
+RUN chmod 755 /etc/s6-overlay/s6-rc.d/*/run /etc/s6-overlay/s6-rc.d/*/finish /etc/s6-overlay/s6-rc.d/*/up 2>/dev/null || true
 EXPOSE 3000
 VOLUME ["/config"]
-
-# Set entry point
 ENTRYPOINT ["/init"]

@@ -1,7 +1,8 @@
 FROM python:3.12.8-slim-bookworm
 COPY --from=shinsenter/s6-overlay / /
-ENV DEBIAN_FRONTEND=noninteractive
-COPY requirements.txt ./
+ENV DEBIAN_FRONTEND=noninteractive \
+    UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple
+COPY pyproject.toml uv.lock ./
 COPY package_list_debian.txt ./
 RUN set -xe && \
     echo "deb http://mirrors.ustc.edu.cn/debian/ bookworm main" > /etc/apt/sources.list && \
@@ -20,10 +21,12 @@ RUN set -xe && \
     if [ "$(uname -m)" = "x86_64" ]; then ARCH=amd64; elif [ "$(uname -m)" = "aarch64" ]; then ARCH=arm64; fi && \
     curl -L https://dl.min.io/client/mc/release/linux-${ARCH}/mc -o /usr/bin/mc && \
     chmod +x /usr/bin/mc && \
-    pip install --upgrade pip setuptools wheel && \
-    pip install cython && \
-    pip install -r ./requirements.txt && \
-    pip install feapder==1.9.2 --no-deps &&\
+    python -m pip install --upgrade pip setuptools wheel uv && \
+    python -m pip install cython && \
+    uv export --frozen --no-dev --no-hashes --no-emit-project -o /tmp/requirements.txt && \
+    uv pip install --system -r /tmp/requirements.txt && \
+    python -m pip install feapder==1.9.2 --no-deps && \
+    python -m pip install uv && \
     apt-get remove -y build-essential && \
     apt-get autoremove -y && \
     apt-get clean -y && \
@@ -62,9 +65,11 @@ RUN mkdir ${HOME} \
     && echo 'fs.inotify.max_user_instances=5242880' >> /etc/sysctl.conf \
     && echo "nt ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers \
     && git config --global pull.ff only
-COPY --chmod=755 . ${WORKDIR}/
-RUN git config --global --add safe.directory ${WORKDIR}
-COPY --chmod=755 ./docker/rootfs /
+COPY . ${WORKDIR}/
+RUN chmod -R 755 ${WORKDIR} \
+    && git config --global --add safe.directory ${WORKDIR}
+COPY ./docker/rootfs /
+RUN chmod 755 /etc/s6-overlay/s6-rc.d/*/run /etc/s6-overlay/s6-rc.d/*/finish /etc/s6-overlay/s6-rc.d/*/up 2>/dev/null || true
 EXPOSE 3000
 VOLUME [ "/config" ]
 ENTRYPOINT [ "/init" ]

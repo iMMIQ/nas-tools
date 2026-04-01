@@ -11,6 +11,47 @@ function WARN() {
     echo -e "[\033[33mWARN\033[0m] ${1}"
 }
 
+function deps_hash() {
+    sha256sum pyproject.toml uv.lock | sha256sum | awk '{print $1}'
+}
+
+function ensure_uv() {
+    if command -v uv >/dev/null 2>&1; then
+        return 0
+    fi
+    INFO "检测到uv未安装，正在安装..."
+    if [ "${NASTOOL_CN_UPDATE}" = "true" ]; then
+        python -m pip install uv -i "${PYPI_MIRROR}"
+    else
+        python -m pip install uv
+    fi
+}
+
+function install_python_build_deps() {
+    if grep -Eqi "Debian" /etc/issue || grep -Eq "Debian" /etc/os-release; then
+        apt-get update -y
+        apt-get install -y build-essential libffi-dev libxml2-dev libxslt1-dev
+    else
+        apk add --no-cache libffi-dev gcc musl-dev libxml2-dev libxslt-dev
+    fi
+}
+
+function sync_python_deps() {
+    ensure_uv || return 1
+    if [ "${NASTOOL_CN_UPDATE}" = "true" ] && [ -n "${PYPI_MIRROR}" ]; then
+        export UV_DEFAULT_INDEX="${PYPI_MIRROR}"
+    else
+        unset UV_DEFAULT_INDEX
+    fi
+    uv export --frozen --no-dev --no-hashes --no-emit-project -o /tmp/requirements.txt || return 1
+    uv pip install --system -r /tmp/requirements.txt || return 1
+    if [ "${NASTOOL_CN_UPDATE}" = "true" ]; then
+        python -m pip install feapder==1.9.2 --no-deps -i "${PYPI_MIRROR}" || return 1
+    else
+        python -m pip install feapder==1.9.2 --no-deps || return 1
+    fi
+}
+
 # 更换国内软件源
 function package_cn {
 
@@ -95,30 +136,27 @@ function package_update {
 }
 
 # python库更新
-function requirements_update {
+function python_deps_update {
 
-    hash_old=$(cat /tmp/requirements.txt.sha256sum)
-    hash_new=$(sha256sum requirements.txt)
+    hash_old=$(cat /tmp/uv-deps.sha256sum)
+    hash_new=$(deps_hash)
     if [ "${hash_old}" != "${hash_new}" ]; then
-        INFO "检测到requirements.txt有变化，重新安装依赖..."
+        INFO "检测到pyproject.toml或uv.lock有变化，重新安装依赖..."
         if [ "${NASTOOL_CN_UPDATE}" = "true" ]; then
-            package_cn
-            apk add --no-cache libffi-dev gcc musl-dev libxml2-dev libxslt-dev
-            pip install --upgrade pip setuptools wheel -i "${PYPI_MIRROR}"
-            pip install -r requirements.txt -i "${PYPI_MIRROR}"
-            pip install feapder==1.9.2 --no-deps -i "${PYPI_MIRROR}"
-        else
-            apk add --no-cache libffi-dev gcc musl-dev libxml2-dev libxslt-dev
-            pip install --upgrade pip setuptools wheel
-            pip install -r requirements.txt
-            pip install feapder==1.9.2 --no-deps
+            if grep -Eqi "Debian" /etc/issue || grep -Eq "Debian" /etc/os-release; then
+                package_cn_debian
+            else
+                package_cn
+            fi
         fi
+        install_python_build_deps
+        sync_python_deps
         if [ $? -ne 0 ]; then
             ERROR "无法安装依赖，请更新镜像！"
             exit 1
         else
             INFO "依赖安装成功"
-            sha256sum requirements.txt > /tmp/requirements.txt.sha256sum
+            deps_hash > /tmp/uv-deps.sha256sum
         fi
     fi
 
@@ -130,9 +168,9 @@ function feapder_check {
     if ! python -c "import feapder" 2>/dev/null; then
         INFO "检测到feapder未安装，正在安装..."
         if [ "${NASTOOL_CN_UPDATE}" = "true" ]; then
-            pip install feapder==1.9.2 --no-deps -i "${PYPI_MIRROR}"
+            python -m pip install feapder==1.9.2 --no-deps -i "${PYPI_MIRROR}"
         else
-            pip install feapder==1.9.2 --no-deps
+            python -m pip install feapder==1.9.2 --no-deps
         fi
         if [ $? -ne 0 ]; then
             ERROR "无法安装feapder，请更新镜像！"
@@ -166,8 +204,8 @@ cd ${WORKDIR}
 
 # 自动更新
 if [ "${NASTOOL_AUTO_UPDATE}" = "true" ]; then
-    if [ ! -s /tmp/requirements.txt.sha256sum ]; then
-        sha256sum requirements.txt > /tmp/requirements.txt.sha256sum
+    if [ ! -s /tmp/uv-deps.sha256sum ]; then
+        deps_hash > /tmp/uv-deps.sha256sum
     fi
     if [ ! -s /tmp/third_party.txt.sha256sum ]; then
         sha256sum third_party.txt > /tmp/third_party.txt.sha256sum
@@ -178,7 +216,6 @@ if [ "${NASTOOL_AUTO_UPDATE}" = "true" ]; then
     INFO "更新主程序..."
     git remote set-url origin "${REPO_URL}" &> /dev/null
     echo "windows/" > .gitignore
-    # 更新分支
     if [[ "${NASTOOL_VERSION}" == "dev" ]]; then
         branch="dev"
     else
@@ -191,13 +228,9 @@ if [ "${NASTOOL_AUTO_UPDATE}" = "true" ]; then
 
     if [ $? -eq 0 ]; then
         INFO "主程序更新成功"
-        # 系统软件包更新
         package_update
-        # Python依赖包更新
-        requirements_update
-        # feapder 检查
+        python_deps_update
         feapder_check
-        # third_party 更新
         third_party_update
     else
         ERROR "更新失败，继续使用旧的程序来启动..."
