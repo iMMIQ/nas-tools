@@ -1,36 +1,58 @@
+# syntax=docker/dockerfile:1.7
 FROM python:3.12.8-slim-bookworm
+
+ARG PYPI_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
+ARG DEBIAN_MIRROR=http://mirrors.tuna.tsinghua.edu.cn/debian
+ARG VCS_REF=unknown
+
 COPY --from=shinsenter/s6-overlay / /
+
+LABEL org.opencontainers.image.source="https://github.com/iMMIQ/nas-tools" \
+      org.opencontainers.image.revision="${VCS_REF}"
+
 ENV DEBIAN_FRONTEND=noninteractive \
-    UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple
-COPY pyproject.toml uv.lock ./
-COPY package_list_debian.txt ./
-RUN set -xe && \
-    echo "deb http://mirrors.ustc.edu.cn/debian/ bookworm main" > /etc/apt/sources.list && \
-    echo "deb http://mirrors.ustc.edu.cn/debian/ bookworm-updates main" >> /etc/apt/sources.list && \
-    echo "deb http://mirrors.ustc.edu.cn/debian-security/ bookworm-security main" >> /etc/apt/sources.list && \
-    apt-get update -y || (sleep 10 && apt-get update -y) && \
-    apt-get install -y --no-install-recommends --fix-missing $(cat ./package_list_debian.txt) || \
-    (apt-get update -y && apt-get install -y --no-install-recommends --fix-missing $(cat ./package_list_debian.txt)) && \
-    apt-get install -y --no-install-recommends curl || \
-    (sleep 30 && apt-get update -y && apt-get install -y --no-install-recommends curl) && \
-    ln -sf /command/with-contenv /usr/bin/with-contenv && \
-    ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
-    echo "Asia/Shanghai" > /etc/timezone && \
-    locale-gen zh_CN.UTF-8 && \
-    curl https://rclone.org/install.sh | bash && \
-    if [ "$(uname -m)" = "x86_64" ]; then ARCH=amd64; elif [ "$(uname -m)" = "aarch64" ]; then ARCH=arm64; fi && \
-    curl -L https://dl.min.io/client/mc/release/linux-${ARCH}/mc -o /usr/bin/mc && \
-    chmod +x /usr/bin/mc && \
-    python -m pip install --upgrade pip setuptools wheel uv && \
-    python -m pip install cython && \
-    uv export --frozen --no-dev --no-hashes --no-emit-project -o /tmp/requirements.txt && \
-    uv pip install --system -r /tmp/requirements.txt && \
-    python -m pip install feapder==1.9.2 --no-deps && \
-    python -m pip install uv && \
-    apt-get remove -y build-essential && \
-    apt-get autoremove -y && \
-    apt-get clean -y && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /root/.cache /var/tmp/*
+    PIP_INDEX_URL=${PYPI_MIRROR} \
+    UV_DEFAULT_INDEX=${PYPI_MIRROR} \
+    PIP_DEFAULT_TIMEOUT=120 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_LINK_MODE=copy
+
+COPY pyproject.toml uv.lock package_list_debian.txt ./
+
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=cache,target=/root/.cache/uv \
+    set -eux; \
+    printf 'deb %s bookworm main\ndeb %s bookworm-updates main\ndeb http://deb.debian.org/debian-security bookworm-security main\n' "$DEBIAN_MIRROR" "$DEBIAN_MIRROR" > /etc/apt/sources.list; \
+    if ! apt-get update; then \
+        printf 'deb http://deb.debian.org/debian bookworm main\ndeb http://deb.debian.org/debian bookworm-updates main\ndeb http://deb.debian.org/debian-security bookworm-security main\n' > /etc/apt/sources.list; \
+        apt-get update; \
+    fi; \
+    apt-get install -y --no-install-recommends \
+        $(tr '\n' ' ' < package_list_debian.txt) \
+        build-essential \
+        libffi-dev \
+        libxml2-dev \
+        libxslt1-dev; \
+    ln -sf /command/with-contenv /usr/bin/with-contenv; \
+    ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime; \
+    echo "Asia/Shanghai" > /etc/timezone; \
+    locale-gen zh_CN.UTF-8; \
+    curl -fsSL https://rclone.org/install.sh | bash; \
+    ARCH=$(case "$(uname -m)" in x86_64) echo amd64 ;; aarch64) echo arm64 ;; *) uname -m ;; esac); \
+    curl -fsSL "https://dl.min.io/client/mc/release/linux-${ARCH}/mc" -o /usr/bin/mc; \
+    chmod +x /usr/bin/mc; \
+    python -m pip install --upgrade pip setuptools wheel uv cython; \
+    uv export --frozen --no-dev --no-hashes --no-emit-project -o /tmp/requirements.txt; \
+    uv pip install --system -r /tmp/requirements.txt; \
+    python -m pip install --no-deps feapder==1.9.2; \
+    python -m pip uninstall -y uv cython; \
+    apt-get purge -y --auto-remove build-essential libffi-dev libxml2-dev libxslt1-dev; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 ENV PYTHONPATH=/usr/local/lib/python3.12/site-packages \
     DEBIAN_FRONTEND="noninteractive" \
     S6_SERVICES_GRACETIME=30000 \
@@ -45,31 +67,32 @@ ENV PYTHONPATH=/usr/local/lib/python3.12/site-packages \
     NASTOOL_CONFIG="/config/config.yaml" \
     NASTOOL_AUTO_UPDATE=false \
     NASTOOL_CN_UPDATE=true \
+    NASTOOL_IMMUTABLE_IMAGE=true \
     NASTOOL_VERSION=master \
-    REPO_URL="https://github.com/iMMIQ/nas-tools.git" \
+    NASTOOL_BUILD_REF=${VCS_REF} \
     PYPI_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple" \
     PUID=0 \
     PGID=0 \
     UMASK=000 \
     PYTHONWARNINGS="ignore:semaphore_tracker:UserWarning" \
     WORKDIR="/nas-tools"
+
 WORKDIR ${WORKDIR}
-RUN mkdir ${HOME} \
+
+RUN mkdir -p ${HOME} \
     && groupadd -r nt -g 911 \
     && useradd -r nt -g nt -d ${HOME} -s /bin/bash -u 911 \
     && python_ver=$(python3 -V | awk '{print $2}') \
-    && python_path=$(which python3) \
-    && [ -d "/usr/local/lib/python${python_ver%.*}/site-packages" ] || mkdir -p "/usr/local/lib/python${python_ver%.*}/site-packages" \
-    && echo "${WORKDIR}/" > /usr/local/lib/python${python_ver%.*}/site-packages/nas-tools.pth \
+    && mkdir -p "/usr/local/lib/python${python_ver%.*}/site-packages" \
+    && echo "${WORKDIR}/" > "/usr/local/lib/python${python_ver%.*}/site-packages/nas-tools.pth" \
     && echo 'fs.inotify.max_user_watches=5242880' >> /etc/sysctl.conf \
-    && echo 'fs.inotify.max_user_instances=5242880' >> /etc/sysctl.conf \
-    && echo "nt ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers \
-    && git config --global pull.ff only
+    && echo 'fs.inotify.max_user_instances=5242880' >> /etc/sysctl.conf
+
 COPY . ${WORKDIR}/
-RUN chmod -R 755 ${WORKDIR} \
-    && git config --global --add safe.directory ${WORKDIR}
 COPY ./docker/rootfs /
+
 RUN chmod 755 /etc/s6-overlay/s6-rc.d/*/run /etc/s6-overlay/s6-rc.d/*/finish /etc/s6-overlay/s6-rc.d/*/up 2>/dev/null || true
+
 EXPOSE 3000
-VOLUME [ "/config" ]
-ENTRYPOINT [ "/init" ]
+VOLUME ["/config"]
+ENTRYPOINT ["/init"]

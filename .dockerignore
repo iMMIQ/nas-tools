@@ -12,4 +12,9 @@ docker/volume.png
 node_modules
 .venv
 .DS_Store
-
+.tmp
+build
+dist
+*.log
+.vscode
+.idea

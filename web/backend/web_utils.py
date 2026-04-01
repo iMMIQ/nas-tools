@@ -1,4 +1,5 @@
 from functools import lru_cache
+import os
 
 import cn2an
 
@@ -41,7 +42,7 @@ class WebUtils:
         """
         获取当前版本号
         """
-        commit_id = SystemUtils.execute('git rev-parse HEAD')
+        commit_id = os.environ.get('NASTOOL_BUILD_REF') or SystemUtils.execute('git rev-parse HEAD')
         if commit_id and len(commit_id) > 7:
             commit_id = commit_id[:7]
         return "%s %s" % (APP_VERSION, commit_id)

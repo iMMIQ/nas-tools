@@ -36,7 +36,7 @@ docker pull iMMIQ/nas-tools:latest
 ```
 教程见 [这里](docker/readme.md) 。
 
-如无法连接Github，注意不要开启自动更新开关(NASTOOL_AUTO_UPDATE=false)，将NASTOOL_CN_UPDATE设置为true可使用国内源加速安装依赖。
+Docker 镜像现采用不可变部署策略：请保持 `NASTOOL_AUTO_UPDATE=false`，升级时重新 build / pull 新镜像并重建容器；如无法连接 GitHub，可将 `NASTOOL_CN_UPDATE=true` 以使用国内源加速依赖安装。
 
 ### 2、懒猫微服
 
@@ -64,7 +64,7 @@ docker pull iMMIQ/nas-tools:latest
 - `/lzcapp/media/RemoteFS`：懒猫媒体挂载
 - `/lzcapp/run/mnt/home`：文稿兼容挂载
 
-在懒猫环境中建议继续保持 `NASTOOL_AUTO_UPDATE=false`，通过重新部署 LPK 的方式升级应用。
+懒猫环境默认采用不可变镜像：请保持 `NASTOOL_AUTO_UPDATE=false`，通过重新构建镜像并重新部署 LPK 的方式升级应用。
 
 ### 3、本地运行
 推荐使用 `uv` 管理依赖，仓库中的 `pyproject.toml` 和 `uv.lock` 为唯一依赖源：

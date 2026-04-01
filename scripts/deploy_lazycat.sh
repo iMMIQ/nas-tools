@@ -25,6 +25,7 @@ BOX_NAME="${BOX_NAME:-}"
 PLATFORM="${PLATFORM:-linux/amd64}"
 IMAGE_TAG="${IMAGE_TAG:-}"
 REGISTRY_NAMESPACE="${REGISTRY_NAMESPACE:-lzc}"
+CACHE_REF="${CACHE_REF:-}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -93,6 +94,9 @@ if [[ -z "$IMAGE_TAG" ]]; then
 fi
 
 IMAGE_REF="dev.${BOX_NAME}.heiyu.space/${REGISTRY_NAMESPACE}/nas-tools:${IMAGE_TAG}"
+if [[ -z "$CACHE_REF" ]]; then
+  CACHE_REF="dev.${BOX_NAME}.heiyu.space/${REGISTRY_NAMESPACE}/nas-tools:buildcache"
+fi
 APP_URL="https://${SUBDOMAIN}.${BOX_NAME}.heiyu.space"
 LPK_PATH="$ROOT_DIR/${PKG_ID}-v${VERSION}.lpk"
 mkdir -p "$ROOT_DIR/.tmp"
@@ -132,6 +136,7 @@ log "box       : $BOX_NAME"
 log "version   : $VERSION"
 log "image_ref : $IMAGE_REF"
 log "app_url   : $APP_URL"
+log "cache_ref : $CACHE_REF"
 log "lpk       : $LPK_PATH"
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
@@ -140,8 +145,12 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
 fi
 
 run docker buildx build \
+  --file Dockerfile \
   --network host \
   --platform "$PLATFORM" \
+  --build-arg "VCS_REF=$GIT_SHA" \
+  --cache-from "type=registry,ref=$CACHE_REF" \
+  --cache-to "type=registry,ref=$CACHE_REF,mode=max" \
   -t "$IMAGE_REF" \
   --provenance=false \
   --push \

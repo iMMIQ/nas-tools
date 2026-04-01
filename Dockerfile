@@ -1,32 +1,55 @@
+# syntax=docker/dockerfile:1.7
 FROM python:3.12.8-alpine3.20
+
 ARG PYPI_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
+ARG ALPINE_MIRROR=https://mirrors.tuna.tsinghua.edu.cn/alpine
+ARG VCS_REF=unknown
+
+LABEL org.opencontainers.image.source="https://github.com/iMMIQ/nas-tools" \
+      org.opencontainers.image.revision="${VCS_REF}"
+
 ENV PIP_INDEX_URL=${PYPI_MIRROR} \
     UV_DEFAULT_INDEX=${PYPI_MIRROR} \
     PIP_DEFAULT_TIMEOUT=120 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
-COPY pyproject.toml uv.lock ./
-COPY package_list.txt ./
-RUN mkdir -p /root/.config/pip \
-    && python -m pip config set global.index-url ${PIP_INDEX_URL} \
-    && sed -i 's#https://dl-cdn.alpinelinux.org/alpine#https://mirrors.ustc.edu.cn/alpine#g' /etc/apk/repositories \
-    && apk update
-RUN apk add --no-cache --virtual .build-deps \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONUNBUFFERED=1 \
+    UV_LINK_MODE=copy
+
+COPY pyproject.toml uv.lock package_list.txt ./
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=cache,target=/root/.cache/uv \
+    mkdir -p /root/.config/pip \
+    && python -m pip config set global.index-url "${PIP_INDEX_URL}" \
+    && sed -i "s#https://dl-cdn.alpinelinux.org/alpine#${ALPINE_MIRROR}#g" /etc/apk/repositories \
+    && if ! apk add --no-cache --virtual .build-deps \
         libffi-dev \
         gcc \
         musl-dev \
         libxml2-dev \
-        libxslt-dev \
-    && apk add --no-cache $(echo $(cat ./package_list.txt)) \
-    && curl https://rclone.org/install.sh | bash \
-    && python -m pip install --upgrade pip setuptools wheel uv \
-    && python -m pip install cython \
+        libxslt-dev; then \
+        sed -i 's#https://mirrors.tuna.tsinghua.edu.cn/alpine#https://dl-cdn.alpinelinux.org/alpine#g' /etc/apk/repositories \
+        && apk add --no-cache --virtual .build-deps \
+            libffi-dev \
+            gcc \
+            musl-dev \
+            libxml2-dev \
+            libxslt-dev; \
+    fi \
+    && apk add --no-cache $(tr '\n' ' ' < package_list.txt) \
+    && curl -fsSL https://rclone.org/install.sh | bash \
+    && ARCH=$(case "$(uname -m)" in x86_64) echo amd64 ;; aarch64) echo arm64 ;; *) uname -m ;; esac) \
+    && curl -fsSL "https://dl.min.io/client/mc/release/linux-${ARCH}/mc" -o /usr/bin/mc \
+    && chmod +x /usr/bin/mc \
+    && python -m pip install --upgrade pip setuptools wheel uv cython \
     && uv export --frozen --no-dev --no-hashes --no-emit-project -o /tmp/requirements.txt \
     && uv pip install --system -r /tmp/requirements.txt \
-    && python -m pip install feapder==1.9.2 --no-deps \
-    && python -m pip install uv \
+    && python -m pip install --no-deps feapder==1.9.2 \
+    && python -m pip uninstall -y uv cython \
     && apk del --purge .build-deps \
-    && rm -rf /tmp/* /root/.cache /var/cache/apk/*
-ENV PYTHONPATH=/usr/lib/python3.12/site-packages \
+    && rm -rf /tmp/* /var/cache/apk/*
+
+ENV PYTHONPATH=/usr/local/lib/python3.12/site-packages \
     S6_SERVICES_GRACETIME=30000 \
     S6_KILL_GRACETIME=60000 \
     S6_CMD_WAIT_FOR_SERVICES_MAXTIME=0 \
@@ -39,33 +62,34 @@ ENV PYTHONPATH=/usr/lib/python3.12/site-packages \
     NASTOOL_CONFIG="/config/config.yaml" \
     NASTOOL_AUTO_UPDATE=false \
     NASTOOL_CN_UPDATE=true \
+    NASTOOL_IMMUTABLE_IMAGE=true \
     NASTOOL_VERSION=master \
+    NASTOOL_BUILD_REF=${VCS_REF} \
     PS1="\u@\h:\w \$ " \
-    REPO_URL="https://github.com/iMMIQ/nas-tools.git" \
     PYPI_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple" \
-    ALPINE_MIRROR="mirrors.ustc.edu.cn" \
+    ALPINE_MIRROR="mirrors.tuna.tsinghua.edu.cn/alpine" \
     PUID=0 \
     PGID=0 \
     UMASK=000 \
     PYTHONWARNINGS="ignore:semaphore_tracker:UserWarning" \
     WORKDIR="/nas-tools"
+
 WORKDIR ${WORKDIR}
-RUN mkdir ${HOME} \
+
+RUN mkdir -p ${HOME} \
     && addgroup -S nt -g 911 \
     && adduser -S nt -G nt -h ${HOME} -s /bin/bash -u 911 \
     && python_ver=$(python3 -V | awk '{print $2}') \
-    && python_path=$(which python3) \
-    && [ -d "/usr/lib/python${python_ver%.*}/site-packages" ] || mkdir -p "/usr/lib/python${python_ver%.*}/site-packages" \
-    && echo "${WORKDIR}/" > /usr/lib/python${python_ver%.*}/site-packages/nas-tools.pth \
+    && mkdir -p "/usr/local/lib/python${python_ver%.*}/site-packages" \
+    && echo "${WORKDIR}/" > "/usr/local/lib/python${python_ver%.*}/site-packages/nas-tools.pth" \
     && echo 'fs.inotify.max_user_watches=5242880' >> /etc/sysctl.conf \
-    && echo 'fs.inotify.max_user_instances=5242880' >> /etc/sysctl.conf \
-    && echo "nt ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers \
-    && git config --global pull.ff only
+    && echo 'fs.inotify.max_user_instances=5242880' >> /etc/sysctl.conf
+
 COPY . ${WORKDIR}/
-RUN chmod -R 755 ${WORKDIR} \
-    && git config --global --add safe.directory ${WORKDIR}
 COPY ./docker/rootfs /
+
 RUN chmod 755 /etc/s6-overlay/s6-rc.d/*/run /etc/s6-overlay/s6-rc.d/*/finish /etc/s6-overlay/s6-rc.d/*/up 2>/dev/null || true
+
 EXPOSE 3000
 VOLUME ["/config"]
-ENTRYPOINT [ "/init" ]
+ENTRYPOINT ["/init"]

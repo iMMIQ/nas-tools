@@ -1467,6 +1467,8 @@ class WebAction:
         更新
         """
         # 升级
+        if os.getenv("NASTOOL_IMMUTABLE_IMAGE", "false").lower() == "true":
+            return {"code": -1, "msg": "当前镜像采用不可变部署，请重新 build 并部署新镜像升级。"}
         if SystemUtils.is_synology():
             if SystemUtils.execute('/bin/ps -w -x | grep -v grep | grep -w "nastool update" | wc -l') == '0':
                 # 调用群晖套件内置命令升级
