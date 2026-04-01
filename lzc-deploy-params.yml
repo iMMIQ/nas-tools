@@ -1,0 +1,12 @@
+params:
+  - id: login_user
+    type: string
+    name: "Login User"
+    description: "NAS Tools initial admin username"
+    default_value: "admin"
+
+  - id: login_password
+    type: secret
+    name: "Login Password"
+    description: "NAS Tools initial admin password"
+    default_value: "$random(len=20)"

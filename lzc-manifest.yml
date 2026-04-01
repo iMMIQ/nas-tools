@@ -26,6 +26,162 @@ application:
   subdomain: nastools
   routes:
     - /=http://nastools:3000/
+  injects:
+    - id: nastools-capture-login-request
+      auth_required: false
+      on: request
+      when:
+        - /
+      do: |
+        const method = String(ctx.request.method || "").toUpperCase();
+        const path = String(ctx.request.path || "");
+        if (path !== "/" || method !== "POST") return;
+
+        let form = null;
+        try {
+          form = ctx.body.getForm();
+        } catch {
+          form = null;
+        }
+        if (!form || typeof form !== "object") return;
+
+        const pickFirst = (value) => {
+          if (Array.isArray(value)) return String(value[0] ?? "");
+          return String(value ?? "");
+        };
+
+        const username = pickFirst(form.username).trim();
+        const password = pickFirst(form.password);
+
+        if (username) ctx.flow.set("nastools.pending_username", username);
+        if (password) ctx.flow.set("nastools.pending_password", password);
+
+    - id: nastools-capture-config-password-request
+      auth_required: false
+      on: request
+      when:
+        - /do
+      do: |
+        const method = String(ctx.request.method || "").toUpperCase();
+        const path = String(ctx.request.path || "");
+        if (path !== "/do" || method !== "POST") return;
+
+        let payload = null;
+        try {
+          payload = ctx.body.getJSON();
+        } catch {
+          payload = null;
+        }
+        if (!payload || typeof payload !== "object") return;
+        if (payload.cmd !== "update_config") return;
+
+        const data = payload.data && typeof payload.data === "object" ? payload.data : {};
+        const username = typeof data["app.login_user"] === "string" ? data["app.login_user"].trim() : "";
+        const password = typeof data["app.login_password"] === "string" ? data["app.login_password"] : "";
+
+        if (username) ctx.flow.set("nastools.pending_username", username);
+        if (password && !password.startsWith("[hash]")) {
+          ctx.flow.set("nastools.pending_password", password);
+        }
+
+    - id: nastools-commit-password
+      auth_required: false
+      on: response
+      when:
+        - /
+        - /do
+      do: |
+        const method = String(ctx.request.method || "").toUpperCase();
+        const path = String(ctx.request.path || "");
+
+        const username = ctx.flow.get("nastools.pending_username");
+        const password = ctx.flow.get("nastools.pending_password");
+        const hasUsername = typeof username === "string" && username.length > 0;
+        const hasPassword = typeof password === "string" && password.length > 0;
+        if (!hasUsername && !hasPassword) return;
+
+        if (path === "/" && method === "POST") {
+          if (ctx.status < 300 || ctx.status >= 400) return;
+          const location = String(ctx.headers.get("Location") || ctx.headers.get("location") || "");
+          if (!location.startsWith("/web")) return;
+        } else if (path === "/do" && method === "POST") {
+          if (ctx.status < 200 || ctx.status >= 300) return;
+
+          let body = null;
+          try {
+            body = ctx.body.getJSON();
+          } catch {
+            body = null;
+          }
+          if (!body || typeof body !== "object" || body.code !== 0) return;
+        } else {
+          return;
+        }
+
+        if (hasUsername) ctx.persist.set("nastools.username", username);
+        if (hasPassword) ctx.persist.set("nastools.password", password);
+
+    - id: nastools-login-autofill
+      auth_required: false
+      when:
+        - /
+      do:
+        - src: builtin://simple-inject-password
+          params:
+            user:
+              $persist: nastools.username
+            password:
+              $persist: nastools.password
+            userSelector: "input[name='username']"
+            passwordSelector: "input[name='password']"
+            autoSubmit: false
+
+    - id: nastools-basic-autofill
+      when:
+        - /web*
+      do: |
+        if (ctx.runtime.executedBefore) return;
+
+        (async () => {
+          const [username, password] = await Promise.all([
+            ctx.persist.get("nastools.username"),
+            ctx.persist.get("nastools.password"),
+          ]);
+
+          const applyValue = (input, value, marker) => {
+            if (!(input instanceof HTMLInputElement)) return;
+            if (typeof value !== "string" || !value) return;
+            if (input.dataset[marker] === "1") return;
+            if (input.value === value) {
+              input.dataset[marker] = "1";
+              return;
+            }
+
+            input.value = value;
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+            input.dataset[marker] = "1";
+          };
+
+          const fillBasicForm = () => {
+            const userInput = document.querySelector("#app\\.login_user");
+            const passwordInput = document.querySelector("#app\\.login_password");
+            if (!userInput || !passwordInput) return;
+
+            applyValue(userInput, username, "lzcFilledUser");
+            applyValue(passwordInput, password, "lzcFilledPassword");
+          };
+
+          fillBasicForm();
+
+          const observer = new MutationObserver(() => {
+            fillBasicForm();
+          });
+
+          const root = document.documentElement || document.body;
+          if (!root) return;
+          observer.observe(root, { childList: true, subtree: true });
+        })().catch(() => {});
 
 services:
   nastools:
@@ -34,6 +190,8 @@ services:
       - /lzcapp/var/config:/config
       - /lzcapp/cache/nas-tools:/cache
     environment:
+      - LZC_NASTOOLS_INIT_LOGIN_USER={{ index .U "login_user" }}
+      - LZC_NASTOOLS_INIT_LOGIN_PASSWORD={{ index .U "login_password" }}
       - NASTOOL_CONFIG=/config/config.yaml
       - NASTOOL_CACHE_DIR=/cache
       - NASTOOL_LOG=/cache/logs

@@ -1,0 +1,3 @@
+#!/command/execlineb -P
+foreground { mkdir -p /run/s6-rc }
+s6-touch /run/s6-rc/init-015-bootstrap-login

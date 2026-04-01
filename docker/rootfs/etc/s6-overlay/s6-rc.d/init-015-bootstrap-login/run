@@ -1,0 +1,49 @@
+#!/command/with-contenv /bin/bash
+# shellcheck shell=bash
+
+set -eu
+
+python3 - <<'PY'
+from pathlib import Path
+import os
+
+import ruamel.yaml
+from werkzeug.security import check_password_hash, generate_password_hash
+
+
+login_user = (os.environ.get("LZC_NASTOOLS_INIT_LOGIN_USER") or "admin").strip() or "admin"
+login_password = os.environ.get("LZC_NASTOOLS_INIT_LOGIN_PASSWORD") or "password"
+
+config_path = Path(os.environ.get("NASTOOL_CONFIG") or "/config/config.yaml")
+template_path = Path("/nas-tools/config/config.yaml")
+
+yaml = ruamel.yaml.YAML()
+yaml.preserve_quotes = True
+
+if not config_path.exists():
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(template_path.read_text(encoding="utf-8"), encoding="utf-8")
+
+with config_path.open("r", encoding="utf-8") as fh:
+    config = yaml.load(fh) or {}
+
+app = config.setdefault("app", {})
+current_user = str(app.get("login_user") or "")
+current_password = str(app.get("login_password") or "")
+
+is_default_password = current_password in ("", "password")
+if not is_default_password and current_password.startswith("[hash]"):
+    try:
+        is_default_password = check_password_hash(current_password[6:], "password")
+    except Exception:
+        is_default_password = False
+
+should_update = (not current_user) or (current_user == "admin" and is_default_password)
+if should_update:
+    app["login_user"] = login_user
+    app["login_password"] = f"[hash]{generate_password_hash(login_password)}"
+    with config_path.open("w", encoding="utf-8") as fh:
+        yaml.dump(config, fh)
+PY
+
+chown nt:nt "${NASTOOL_CONFIG:-/config/config.yaml}"
