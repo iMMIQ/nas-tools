@@ -60,9 +60,10 @@ Docker 镜像现采用不可变部署策略：请保持 `NASTOOL_AUTO_UPDATE=fal
 
 部署后，应用配置会自动写入 `/config/config.yaml`，首次使用时可重点关注这些容器内路径：
 
-- `/config`：应用配置与日志
+- `/config`：应用配置、数据库、插件与浏览器持久数据
+- `/cache`：日志、临时文件、TMDB 缓存、webdriver 下载
 - `/lzcapp/media/RemoteFS`：懒猫媒体挂载
-- `/lzcapp/run/mnt/home`：文稿兼容挂载
+- `/lzcapp/document`：懒猫文稿挂载
 
 懒猫环境默认采用不可变镜像：请保持 `NASTOOL_AUTO_UPDATE=false`，通过重新构建镜像并重新部署 LPK 的方式升级应用。
 

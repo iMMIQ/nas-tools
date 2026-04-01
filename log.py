@@ -47,7 +47,7 @@ class Logger:
                 self.logger.addHandler(log_server_handler)
 
         # 记录日志到文件
-        logpath = os.environ.get('NASTOOL_LOG') or Config().get_config_path() + "/logs"
+        logpath = Config().get_log_path()
         if logpath:
             if not os.path.exists(logpath):
                 os.makedirs(logpath, exist_ok=True)

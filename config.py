@@ -186,8 +186,20 @@ class Config(object):
     def get_config_path(self):
         return os.path.dirname(self._config_path)
 
+    def get_cache_path(self):
+        return os.environ.get('NASTOOL_CACHE_DIR') or os.path.join(self.get_config_path(), 'cache')
+
+    def get_log_path(self):
+        return os.environ.get('NASTOOL_LOG') or os.path.join(self.get_cache_path(), 'logs')
+
     def get_temp_path(self):
-        return os.path.join(self.get_config_path(), "temp")
+        return os.path.join(self.get_cache_path(), "temp")
+
+    def get_tmdb_cache_path(self):
+        return os.environ.get('NASTOOL_TMDB_CACHE') or os.path.join(self.get_cache_path(), 'tmdb.dat')
+
+    def get_webdriver_cache_path(self):
+        return os.environ.get('NASTOOL_WEBDRIVER_PATH') or os.path.join(self.get_cache_path(), 'webdriver')
 
     @staticmethod
     def get_root_path():

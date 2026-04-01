@@ -127,7 +127,7 @@ class SystemUtils:
 
     @staticmethod
     def get_download_webdriver_path():
-        download_webdriver_path = os.path.join(Config().get_config_path(), "webdriver")
+        download_webdriver_path = Config().get_webdriver_cache_path()
         try:
             os.makedirs(download_webdriver_path, exist_ok=True)
         except OSError as e:

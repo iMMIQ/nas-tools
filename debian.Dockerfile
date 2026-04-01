@@ -65,6 +65,10 @@ ENV PYTHONPATH=/usr/local/lib/python3.12/site-packages \
     LANG="C.UTF-8" \
     TZ="Asia/Shanghai" \
     NASTOOL_CONFIG="/config/config.yaml" \
+    NASTOOL_CACHE_DIR="/cache" \
+    NASTOOL_LOG="/cache/logs" \
+    NASTOOL_TMDB_CACHE="/cache/tmdb.dat" \
+    NASTOOL_WEBDRIVER_PATH="/cache/webdriver" \
     NASTOOL_AUTO_UPDATE=false \
     NASTOOL_CN_UPDATE=true \
     NASTOOL_IMMUTABLE_IMAGE=true \
@@ -94,5 +98,5 @@ COPY ./docker/rootfs /
 RUN chmod 755 /etc/s6-overlay/s6-rc.d/*/run /etc/s6-overlay/s6-rc.d/*/finish /etc/s6-overlay/s6-rc.d/*/up 2>/dev/null || true
 
 EXPOSE 3000
-VOLUME ["/config"]
+VOLUME ["/config", "/cache"]
 ENTRYPOINT ["/init"]

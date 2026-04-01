@@ -31,7 +31,8 @@ docker run -d \
     --name nas-tools \
     --hostname nas-tools \
     -p 3000:3000   `# 默认的webui控制端口` \
-    -v $(pwd)/config:/config  `# 冒号左边请修改为你想在主机上保存配置文件的路径` \
+    -v $(pwd)/config:/config  `# 持久化配置、数据库、插件` \
+    -v $(pwd)/cache:/cache  `# 日志、临时缓存、webdriver` \
     -v /你的媒体目录:/你想设置的容器内能见到的目录    `# 媒体目录，多个目录需要分别映射进来` \
     -e PUID=0     `# 想切换为哪个用户来运行程序，该用户的uid，详见下方说明` \
     -e PGID=0     `# 想切换为哪个用户来运行程序，该用户的gid，详见下方说明` \
@@ -53,7 +54,8 @@ services:
     ports:
       - 3000:3000        # 默认的webui控制端口
     volumes:
-      - ./config:/config   # 冒号左边请修改为你想保存配置的路径
+      - ./config:/config   # 持久化配置、数据库、插件
+      - ./cache:/cache     # 持久化日志与缓存目录
       - /你的媒体目录:/你想设置的容器内能见到的目录   # 媒体目录，多个目录需要分别映射进来，需要满足配置文件说明中的要求
     environment: 
       - PUID=0    # 想切换为哪个用户来运行程序，该用户的uid
@@ -73,7 +75,7 @@ services:
 
 - 删除旧容器并使用新镜像重新创建容器。
 
-- 保留原有 `/config` 和媒体目录挂载即可完成升级。
+- 保留原有 `/config`、新增 `/cache`，并继续挂载媒体目录即可完成升级。
 
 ## 关于PUID/PGID的说明
 
