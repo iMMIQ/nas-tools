@@ -55,7 +55,13 @@ Docker 镜像现采用不可变部署策略：请保持 `NASTOOL_AUTO_UPDATE=fal
 如需指定微服名称：
 
 ```bash
-./scripts/deploy_lazycat.sh --box immiqtop
+./scripts/deploy_lazycat.sh --box <box-name>
+```
+
+如需给某次构建补一个易识别的编号，而不是手工写完整镜像 tag：
+
+```bash
+./scripts/deploy_lazycat.sh --box <box-name> --build-id local1
 ```
 
 部署后，应用配置会自动写入 `/config/config.yaml`，首次使用时可重点关注这些容器内路径：

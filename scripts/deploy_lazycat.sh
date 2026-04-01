@@ -24,6 +24,7 @@ DRY_RUN=0
 BOX_NAME="${BOX_NAME:-}"
 PLATFORM="${PLATFORM:-linux/amd64}"
 IMAGE_TAG="${IMAGE_TAG:-}"
+BUILD_ID="${BUILD_ID:-}"
 REGISTRY_NAMESPACE="${REGISTRY_NAMESPACE:-lzc}"
 CACHE_REF="${CACHE_REF:-}"
 
@@ -41,18 +42,23 @@ while [[ $# -gt 0 ]]; do
       IMAGE_TAG="$2"
       shift 2
       ;;
+    --build-id)
+      BUILD_ID="$2"
+      shift 2
+      ;;
     --dry-run)
       DRY_RUN=1
       shift
       ;;
     -h|--help)
       cat <<'USAGE'
-Usage: ./scripts/deploy_lazycat.sh [--box <box-name>] [--platform <platform>] [--image-tag <tag>] [--dry-run]
+Usage: ./scripts/deploy_lazycat.sh [--box <box-name>] [--platform <platform>] [--image-tag <tag>] [--build-id <id>] [--dry-run]
 
 Examples:
   ./scripts/deploy_lazycat.sh
-  ./scripts/deploy_lazycat.sh --box immiqtop
-  ./scripts/deploy_lazycat.sh --box immiqtop --image-tag 3.5.9-test1
+  ./scripts/deploy_lazycat.sh --box <box-name>
+  ./scripts/deploy_lazycat.sh --box <box-name> --build-id local1
+  ./scripts/deploy_lazycat.sh --box <box-name> --image-tag 3.5.9-custom
 USAGE
       exit 0
       ;;
@@ -89,8 +95,16 @@ fi
 [[ -n "$BOX_NAME" ]] || err 'failed to resolve target box name'
 
 GIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo nogit)"
+if [[ -n "$BUILD_ID" ]]; then
+  BUILD_ID="$(printf '%s' "$BUILD_ID" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+//; s/-+$//')"
+  [[ -n "$BUILD_ID" ]] || err 'build id became empty after sanitization'
+fi
 if [[ -z "$IMAGE_TAG" ]]; then
-  IMAGE_TAG="${VERSION}-${GIT_SHA}-$(date +%Y%m%d%H%M%S)"
+  IMAGE_TAG="${VERSION}-${GIT_SHA}"
+  if [[ -n "$BUILD_ID" ]]; then
+    IMAGE_TAG="${IMAGE_TAG}-${BUILD_ID}"
+  fi
+  IMAGE_TAG="${IMAGE_TAG}-$(date +%Y%m%d%H%M%S)"
 fi
 
 IMAGE_REF="dev.${BOX_NAME}.heiyu.space/${REGISTRY_NAMESPACE}/nas-tools:${IMAGE_TAG}"

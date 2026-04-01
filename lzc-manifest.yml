@@ -185,7 +185,7 @@ application:
 
 services:
   nastools:
-    image: dev.immiqtop.heiyu.space/lzc/nas-tools:3.5.9
+    image: dev.${LAZYCAT_BOX_NAME}.heiyu.space/lzc/nas-tools:3.5.9
     binds:
       - /lzcapp/var/config:/config
       - /lzcapp/cache/nas-tools:/cache
