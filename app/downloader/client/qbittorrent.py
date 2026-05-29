@@ -228,7 +228,13 @@ class Qbittorrent(_IDownloadClient):
         if not self.qbc:
             return None
         torrents, error = self.get_torrents(ids=ids,
-                                            status=["downloading"],
+                                            status=["downloading",
+                                                    "stalledDL",
+                                                    "metaDL",
+                                                    "forcedDL",
+                                                    "queuedDL",
+                                                    "checkingDL",
+                                                    "pausedDL"],
                                             tag=tag)
         return None if error else torrents or []
 
