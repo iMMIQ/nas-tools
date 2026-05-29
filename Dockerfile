@@ -22,6 +22,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     mkdir -p /root/.config/pip \
     && python -m pip config set global.index-url "${PIP_INDEX_URL}" \
     && sed -i "s#https://dl-cdn.alpinelinux.org/alpine#${ALPINE_MIRROR}#g" /etc/apk/repositories \
+    && grep -q '/community' /etc/apk/repositories \
+       || echo "https://mirrors.tuna.tsinghua.edu.cn/alpine/v3.20/community" >> /etc/apk/repositories \
     && if ! apk add --no-cache --virtual .build-deps \
         libffi-dev \
         gcc \
@@ -36,8 +38,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
             libxml2-dev \
             libxslt-dev; \
     fi \
-    && apk add --no-cache $(tr '\n' ' ' < package_list.txt) \
-    && curl -fsSL https://rclone.org/install.sh | bash \
+    && apk add --no-cache $(tr '\n' ' ' < package_list.txt) rclone \
     && ARCH=$(case "$(uname -m)" in x86_64) echo amd64 ;; aarch64) echo arm64 ;; *) uname -m ;; esac) \
     && curl -fsSL "https://dl.min.io/client/mc/release/linux-${ARCH}/mc" -o /usr/bin/mc \
     && chmod +x /usr/bin/mc \
