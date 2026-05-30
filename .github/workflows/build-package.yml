@@ -9,99 +9,105 @@ jobs:
   Windows-build:
     runs-on: windows-latest
     steps:
-    - name: Init Python 3.12.7
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+        fetch-depth: 1
+
+    - name: Init Python 3.12
       uses: actions/setup-python@v5
       with:
-        python-version: '3.12.7'
+        python-version: '3.12'
 
     - name: Install dependent packages
       run: |
         python -m pip install --upgrade pip
-        pip install setuptools wheel numpy pyparsing wxpython pyinstaller
-        git clone --depth=1 -b master https://github.com/TonyLiooo/nas-tools --recurse-submodule
-        cd nas-tools
-        pip install -r package/requirements.txt
-        echo ("NASTOOL_CONFIG=D:/a/nas-tools/nas-tools/nas-tools/config/config.yaml") >> $env:GITHUB_ENV
-        echo $env:NASTOOL_CONFIG
+        pip install setuptools wheel numpy pyparsing wxpython pyinstaller uv
+        uv export --frozen --group build --no-dev --no-hashes --no-emit-project -o requirements.txt
+        pip install -r requirements.txt
+        pip install feapder==1.9.2 --no-deps
+        echo ("NASTOOL_CONFIG=D:/a/nas-tools/nas-tools/config/config.yaml") >> $env:GITHUB_ENV
       shell: pwsh
 
     - name: Package through pyinstaller
       run: |
-        cd nas-tools
-        dir
-        copy .\package\rely\upx.exe c:\hostedtoolcache\windows\python\3.12.7\x64\Scripts
-        copy .\package\rely\hook-cn2an.py c:\hostedtoolcache\windows\python\3.12.7\x64\lib\site-packages\pyinstaller\hooks
-        copy .\package\rely\hook-zhconv.py c:\hostedtoolcache\windows\python\3.12.7\x64\lib\site-packages\pyinstaller\hooks
-        copy .\package\rely\hook-iso639.py c:\hostedtoolcache\windows\python\3.12.7\x64\lib\site-packages\pyinstaller\hooks
+        copy .\package\rely\upx.exe c:\hostedtoolcache\windows\python\3.12\x64\Scripts
+        copy .\package\rely\hook-cn2an.py c:\hostedtoolcache\windows\python\3.12\x64\lib\site-packages\pyinstaller\hooks
+        copy .\package\rely\hook-zhconv.py c:\hostedtoolcache\windows\python\3.12\x64\lib\site-packages\pyinstaller\hooks
+        copy .\package\rely\hook-iso639.py c:\hostedtoolcache\windows\python\3.12\x64\lib\site-packages\pyinstaller\hooks
         copy .\third_party.txt .\package
-        mkdir -Force "C:\hostedtoolcache\windows\Python\3.12.7\x64\lib\site-packages\setuptools\_vendor\pyparsing\diagram"
-        copy .\package\rely\template.jinja2 c:\hostedtoolcache\windows\Python\3.12.7\x64\lib\site-packages\setuptools\_vendor\pyparsing\diagram
-        xcopy .\web c:\hostedtoolcache\windows\python\3.12.7\x64\lib\site-packages\web\ /e
-        xcopy .\config c:\hostedtoolcache\windows\python\3.12.7\x64\lib\site-packages\config\ /e
-        xcopy .\scripts c:\hostedtoolcache\windows\python\3.12.7\x64\lib\site-packages\scripts\ /e
+        mkdir -Force "C:\hostedtoolcache\windows\Python\3.12\x64\lib\site-packages\setuptools\_vendor\pyparsing\diagram"
+        copy .\package\rely\template.jinja2 c:\hostedtoolcache\windows\Python\3.12\x64\lib\site-packages\setuptools\_vendor\pyparsing\diagram
+        xcopy .\web c:\hostedtoolcache\windows\python\3.12\x64\lib\site-packages\web\ /e
+        xcopy .\config c:\hostedtoolcache\windows\python\3.12\x64\lib\site-packages\config\ /e
+        xcopy .\scripts c:\hostedtoolcache\windows\python\3.12\x64\lib\site-packages\scripts\ /e
         cd package
         pyinstaller nas-tools.spec
-        dir  D:/a/nas-tools/nas-tools/nas-tools/package/dist
+        dir D:/a/nas-tools/nas-tools/package/dist
       shell: pwsh
 
     - name: Upload windows file
       uses: actions/upload-artifact@v4
       with:
         name: windows
-        path: D:/a/nas-tools/nas-tools/nas-tools/package/dist/nas-tools.exe
+        path: D:/a/nas-tools/nas-tools/package/dist/nas-tools.exe
 
 
   Linux-build-amd64:
     runs-on: ubuntu-latest
     steps:
-      - name: Init Python 3.12.7
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Init Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12.7'
+          python-version: '3.12'
 
       - name: Install dependent packages
         run: |
           python -m pip install --upgrade pip
-          pip install wheel pyinstaller
-          git clone --depth=1 -b master https://github.com/TonyLiooo/nas-tools --recurse-submodule
-          cd nas-tools
-          pip install -r package/requirements.txt
-          echo ("NASTOOL_CONFIG=/home/runner/work/nas-tools/nas-tools/nas-tools/config/config.yaml") >> $env:GITHUB_ENV
-          echo $env:NASTOOL_CONFIG
+          pip install setuptools wheel pyinstaller uv
+          uv export --frozen --group build --no-dev --no-hashes --no-emit-project -o requirements.txt
+          pip install -r requirements.txt
+          pip install feapder==1.9.2 --no-deps
+          echo "NASTOOL_CONFIG=/home/runner/work/nas-tools/nas-tools/config/config.yaml" >> $GITHUB_ENV
         shell: pwsh
 
       - name: Package through pyinstaller
         run: |
-          cd nas-tools
-          pwd
-          ls -all
-          cp ./package/rely/hook-cn2an.py /opt/hostedtoolcache/Python/3.12.7/x64/lib/python3.12/site-packages/PyInstaller/hooks/
-          cp ./package/rely/hook-zhconv.py /opt/hostedtoolcache/Python/3.12.7/x64/lib/python3.12/site-packages/PyInstaller/hooks/
-          cp ./package/rely/hook-iso639.py /opt/hostedtoolcache/Python/3.12.7/x64/lib/python3.12/site-packages/PyInstaller/hooks/
+          cp ./package/rely/hook-cn2an.py /opt/hostedtoolcache/Python/3.12/x64/lib/python3.12/site-packages/PyInstaller/hooks/
+          cp ./package/rely/hook-zhconv.py /opt/hostedtoolcache/Python/3.12/x64/lib/python3.12/site-packages/PyInstaller/hooks/
+          cp ./package/rely/hook-iso639.py /opt/hostedtoolcache/Python/3.12/x64/lib/python3.12/site-packages/PyInstaller/hooks/
           cp ./third_party.txt ./package/
-          cp ./package/rely/template.jinja2 /opt/hostedtoolcache/Python/3.12.7/x64/lib/python3.12/site-packages/setuptools/_vendor/pyparsing/diagram/
-          cp -r ./web/. /opt/hostedtoolcache/Python/3.12.7/x64/lib/python3.12/site-packages/web/
-          cp -r ./config/. /opt/hostedtoolcache/Python/3.12.7/x64/lib/python3.12/site-packages/config/
-          cp -r ./scripts/. /opt/hostedtoolcache/Python/3.12.7/x64/lib/python3.12/site-packages/scripts/
+          cp ./package/rely/template.jinja2 /opt/hostedtoolcache/Python/3.12/x64/lib/python3.12/site-packages/setuptools/_vendor/pyparsing/diagram/
+          cp -r ./web/. /opt/hostedtoolcache/Python/3.12/x64/lib/python3.12/site-packages/web/
+          cp -r ./config/. /opt/hostedtoolcache/Python/3.12/x64/lib/python3.12/site-packages/config/
+          cp -r ./scripts/. /opt/hostedtoolcache/Python/3.12/x64/lib/python3.12/site-packages/scripts/
           cd package
-          pwd
-          ls -all
           pyinstaller nas-tools.spec
-          mv /home/runner/work/nas-tools/nas-tools/nas-tools/package/dist/nas-tools /home/runner/work/nas-tools/nas-tools/nas-tools/package/dist/nas-tools.linux.amd64
-          ls -all /home/runner/work/nas-tools/nas-tools/nas-tools/package/dist
+          mv /home/runner/work/nas-tools/nas-tools/package/dist/nas-tools /home/runner/work/nas-tools/nas-tools/package/dist/nas-tools.linux.amd64
+          ls -all /home/runner/work/nas-tools/nas-tools/package/dist
         shell: pwsh
 
       - name: Upload linux file
         uses: actions/upload-artifact@v4
         with:
           name: linux-amd64
-          path: /home/runner/work/nas-tools/nas-tools/nas-tools/package/dist/nas-tools.linux.amd64
+          path: /home/runner/work/nas-tools/nas-tools/package/dist/nas-tools.linux.amd64
 
   Linux-build-arm64:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
 
       - name: Set Up QEMU
         uses: docker/setup-qemu-action@v3
@@ -113,21 +119,24 @@ jobs:
         run: |
           mkdir rootfs
           docker buildx build --platform linux/arm64 --file ./package/builder/Dockerfile --build-arg branch=master --output type=local,dest=./rootfs .
-          mkdir -p /home/runner/work/nas-tools/nas-tools/nas-tools/package/dist/
-          cp ./rootfs/nas-tools /home/runner/work/nas-tools/nas-tools/nas-tools/package/dist/nas-tools.linux.arm64
+          mkdir -p /home/runner/work/nas-tools/nas-tools/package/dist/
+          cp ./rootfs/nas-tools /home/runner/work/nas-tools/nas-tools/package/dist/nas-tools.linux.arm64
         shell: pwsh
 
       - name: Upload linux file
         uses: actions/upload-artifact@v4
         with:
           name: linux-arm64
-          path: /home/runner/work/nas-tools/nas-tools/nas-tools/package/dist/nas-tools.linux.arm64
+          path: /home/runner/work/nas-tools/nas-tools/package/dist/nas-tools.linux.arm64
 
   Linux-build-amd64-musl:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
 
       - name: Set Up QEMU
         uses: docker/setup-qemu-action@v3
@@ -139,21 +148,24 @@ jobs:
         run: |
           mkdir rootfs
           docker buildx build --platform linux/amd64 --file ./package/builder/alpine.Dockerfile --build-arg branch=master --output type=local,dest=./rootfs .
-          mkdir -p /home/runner/work/nas-tools/nas-tools/nas-tools/package/dist/
-          cp ./rootfs/nas-tools /home/runner/work/nas-tools/nas-tools/nas-tools/package/dist/nas-tools.linux.musl.amd64
+          mkdir -p /home/runner/work/nas-tools/nas-tools/package/dist/
+          cp ./rootfs/nas-tools /home/runner/work/nas-tools/nas-tools/package/dist/nas-tools.linux.musl.amd64
         shell: pwsh
 
       - name: Upload linux file
         uses: actions/upload-artifact@v4
         with:
           name: linux-musl-amd64
-          path: /home/runner/work/nas-tools/nas-tools/nas-tools/package/dist/nas-tools.linux.musl.amd64
+          path: /home/runner/work/nas-tools/nas-tools/package/dist/nas-tools.linux.musl.amd64
 
   Linux-build-arm64-musl:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
 
       - name: Set Up QEMU
         uses: docker/setup-qemu-action@v3
@@ -161,19 +173,19 @@ jobs:
       - name: Set Up Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Ppackage through pyinstaller
+      - name: Package through pyinstaller
         run: |
           mkdir rootfs
           docker buildx build --platform linux/arm64 --file ./package/builder/alpine.Dockerfile --build-arg branch=master --output type=local,dest=./rootfs .
-          mkdir -p /home/runner/work/nas-tools/nas-tools/nas-tools/package/dist/
-          cp ./rootfs/nas-tools /home/runner/work/nas-tools/nas-tools/nas-tools/package/dist/nas-tools.linux.musl.arm64
+          mkdir -p /home/runner/work/nas-tools/nas-tools/package/dist/
+          cp ./rootfs/nas-tools /home/runner/work/nas-tools/nas-tools/package/dist/nas-tools.linux.musl.arm64
         shell: pwsh
 
       - name: Upload linux file
         uses: actions/upload-artifact@v4
         with:
           name: linux-musl-arm64
-          path: /home/runner/work/nas-tools/nas-tools/nas-tools/package/dist/nas-tools.linux.musl.arm64
+          path: /home/runner/work/nas-tools/nas-tools/package/dist/nas-tools.linux.musl.arm64
 
   Create-release_Send-message:
     permissions: write-all
@@ -187,38 +199,28 @@ jobs:
         run: |
           app_version=$(cat version.py |sed -ne "s/APP_VERSION\s=\s'v\(.*\)'/\1/gp")
           echo "app_version=$app_version" >> $GITHUB_ENV
-      - name: Download exe and rename
+
+      - name: Download artifacts
         uses: actions/download-artifact@v4
-      - name: get release_informations
+
+      - name: Prepare release assets
         shell: bash
         run: |
-          pwd
-          ls -all
           mkdir releases
-          mv ./windows/nas-tools.exe /home/runner/work/nas-tools/nas-tools/releases/nastool_win_v${{ env.app_version }}.exe
-          mv ./linux-amd64/nas-tools.linux.amd64 /home/runner/work/nas-tools/nas-tools/releases/nastool_linux_amd64_v${{ env.app_version }}
-          mv ./linux-arm64/nas-tools.linux.arm64 /home/runner/work/nas-tools/nas-tools/releases/nastool_linux_arm64_v${{ env.app_version }}
-          mv ./linux-musl-amd64/nas-tools.linux.musl.amd64 /home/runner/work/nas-tools/nas-tools/releases/nastool_linux_musl_amd64_v${{ env.app_version }}
-          mv ./linux-musl-arm64/nas-tools.linux.musl.arm64 /home/runner/work/nas-tools/nas-tools/releases/nastool_linux_musl_arm64_v${{ env.app_version }}
-          pwd
-          ls -all
-      - name: Create release
-        id: create_release
-        uses: actions/create-release@latest
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          mv ./windows/nas-tools.exe releases/nastool_win_v${{ env.app_version }}.exe
+          mv ./linux-amd64/nas-tools.linux.amd64 releases/nastool_linux_amd64_v${{ env.app_version }}
+          mv ./linux-arm64/nas-tools.linux.arm64 releases/nastool_linux_arm64_v${{ env.app_version }}
+          mv ./linux-musl-amd64/nas-tools.linux.musl.amd64 releases/nastool_linux_musl_amd64_v${{ env.app_version }}
+          mv ./linux-musl-arm64/nas-tools.linux.musl.arm64 releases/nastool_linux_musl_arm64_v${{ env.app_version }}
+
+      - name: Create Release & Upload Assets
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ env.app_version }}
-          release_name: v${{ env.app_version }}
+          name: v${{ env.app_version }}
           body: ${{ github.event.commits[0].message }}
           draft: false
           prerelease: false
-
-      - name: Upload release asset
-        uses: dwenegar/upload-release-assets@v1
+          files: releases/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          release_id: ${{ steps.create_release.outputs.id }}
-          assets_path: |
-            /home/runner/work/nas-tools/nas-tools/releases/

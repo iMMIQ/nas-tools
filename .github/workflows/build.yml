@@ -46,12 +46,17 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - 
+      -
         name: Build Image
         uses: docker/build-push-action@v6
         with:
-          context: docker
-          file: docker/Dockerfile
+          context: .
+          file: Dockerfile
+          build-args: |
+            BASE=alpine
+            BUILD_MODE=clone
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           platforms: |
             linux/amd64
             linux/arm64
@@ -99,12 +104,17 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - 
+      -
         name: Build Image
         uses: docker/build-push-action@v6
         with:
-          context: docker
-          file: docker/debian.Dockerfile
+          context: .
+          file: Dockerfile
+          build-args: |
+            BASE=debian
+            BUILD_MODE=clone
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           platforms: |
             linux/amd64
             linux/arm64
