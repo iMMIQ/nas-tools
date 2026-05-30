@@ -78,7 +78,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     && uv pip install --system -r /tmp/requirements.txt \
     && pip install --no-deps feapder==1.9.2 \
     && pip uninstall -y uv cython \
-    && rm -rf /tmp/* /root/.cache/pip /root/.cache/uv
+    && rm -rf /tmp/* /root/.cache/pip
 
 # ---------- common runtime environment ----------
 FROM deps AS runtime
